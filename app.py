@@ -8,14 +8,14 @@ app = Flask(__name__)
 API_KEY = os.environ.get("GEMINI_API_KEY")
 client = genai.Client(api_key=API_KEY) if API_KEY else None
 
-HTML_TEMPLATE = '<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Gemini Mobile</title><style>body{font-family:sans-serif;margin:10px;padding:0;background:#f0f0f0;}form{background:#fff;padding:10px;border-radius:5px;}textarea{width:95%;height:60px;margin-bottom:10px;}input[type=file]{margin-bottom:10px;}input[type=submit]{width:100%;padding:10px;background:#007bff;color:#fff;border:none;border-radius:3px;font-size:16px;}.result{margin-top:15px;background:#fff;padding:10px;border-radius:5px;white-space:pre-wrap;}</style></head><body><h3>Gemini Mobile</h3><form method="POST" enctype="multipart/form-data"><textarea name="prompt" placeholder="Ask something..." required></textarea><br><input type="file" name="image" accept="image/*"><br><input type="submit" value="Send"></form>{result_html}</body></html>'
+HTML_TEMPLATE = '<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Gemini Mobile</title><style>body{{font-family:sans-serif;margin:10px;padding:0;background:#f0f0f0;}}form{{background:#fff;padding:10px;border-radius:5px;}}textarea{{width:95%;height:60px;margin-bottom:10px;}}input[type=file]{{margin-bottom:10px;}}input[type=submit]{{width:100%;padding:10px;background:#007bff;color:#fff;border:none;border-radius:3px;font-size:16px;}}.result{{margin-top:15px;background:#fff;padding:10px;border-radius:5px;white-space:pre-wrap;}}</style></head><body><h3>Gemini Mobile</h3><form method="POST" enctype="multipart/form-data"><textarea name="prompt" placeholder="Ask something..." required></textarea><br><input type="file" name="image" accept="image/*"><br><input type="submit" value="Send"></form>{result_html}</body></html>'
 
 @app.route("/", methods=["GET", "POST"])
 def index():
     result_html = ""
     if request.method == "POST":
         if not client:
-            result_html = '<div class="result"><strong>Error:</strong> GEMINI_API_KEY is not set.</div>'
+            result_html = '<div class="result"><strong>Error:</strong> GEMINI_API_KEY is not set in environment variables.</div>'
         else:
             prompt = request.form.get("prompt", "")
             image_file = request.files.get("image")

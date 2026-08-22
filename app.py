@@ -31,7 +31,7 @@ def index():
             if not result_html:
                 try:
                     response = client.models.generate_content(
-                        model="gemini-2.5-flash",
+                        model="gemini-3.6-flash",
                         contents=contents
                     )
                     result_html = f'<div class="result"><strong>Response:</strong><br>{response.text}</div>'

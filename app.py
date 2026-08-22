@@ -1,70 +1,45 @@
 import os
-from flask import Flask, request, render_template_string
+from flask import Flask, request
 from google import genai
+from PIL import Image
 
 app = Flask(__name__)
+
 API_KEY = os.environ.get("GEMINI_API_KEY")
+client = genai.Client(api_key=API_KEY) if API_KEY else None
 
-HTML_TEMPLATE = """
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>iPhone 4 AI</title>
-<style>
-body { font-family: sans-serif; padding: 10px; background: #f0f0f0; margin: 0; }
-.box { background: white; padding: 15px; border-radius: 8px; border: 1px solid #ccc; }
-textarea { width: 95%; height: 80px; margin-bottom: 10px; font-size: 16px; }
-input[type="file"] { margin-bottom: 10px; }
-input[type="submit"] { padding: 12px 20px; font-size: 16px; width: 100%; background: #007aff; color: white; border: none; border-radius: 5px; }
-.response { margin-top: 15px; background: #eef; padding: 10px; border-radius: 5px; white-space: pre-wrap; font-size: 15px; }
-</style>
-</head>
-<body>
-<div class="box">
-<h2>iPhone 4 AI Helper</h2>
-<form method="POST" enctype="multipart/form-data">
-<label><b>Prompt / Question:</b></label><br>
-<textarea name="prompt" required></textarea><br><br>
+HTML_TEMPLATE = '<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Gemini Mobile</title><style>body{font-family:sans-serif;margin:10px;padding:0;background:#f0f0f0;}form{background:#fff;padding:10px;border-radius:5px;}textarea{width:95%;height:60px;margin-bottom:10px;}input[type=file]{margin-bottom:10px;}input[type=submit]{width:100%;padding:10px;background:#007bff;color:#fff;border:none;border-radius:3px;font-size:16px;}.result{margin-top:15px;background:#fff;padding:10px;border-radius:5px;white-space:pre-wrap;}</style></head><body><h3>Gemini Mobile</h3><form method="POST" enctype="multipart/form-data"><textarea name="prompt" placeholder="Ask something..." required></textarea><br><input type="file" name="image" accept="image/*"><br><input type="submit" value="Send"></form>{result_html}</body></html>'
 
-<label><b>Attach Photo (Optional):</b></label><br>
-<input type="file" name="image" accept="image/*"><br><br>
+@app.route("/", methods=["GET", "POST"])
+def index():
+    result_html = ""
+    if request.method == "POST":
+        if not client:
+            result_html = '<div class="result"><strong>Error:</strong> GEMINI_API_KEY is not set.</div>'
+        else:
+            prompt = request.form.get("prompt", "")
+            image_file = request.files.get("image")
+            contents = [prompt]
+            
+            if image_file and image_file.filename != "":
+                try:
+                    img = Image.open(image_file.stream)
+                    contents.append(img)
+                except Exception as e:
+                    result_html = f'<div class="result"><strong>Image Error:</strong> {e}</div>'
+            
+            if not result_html:
+                try:
+                    response = client.models.generate_content(
+                        model="gemini-2.5-flash",
+                        contents=contents
+                    )
+                    result_html = f'<div class="result"><strong>Response:</strong><br>{response.text}</div>'
+                except Exception as e:
+                    result_html = f'<div class="result"><strong>API Error:</strong> {e}</div>'
+                    
+    return HTML_TEMPLATE.format(result_html=result_html)
 
-<input type="submit" value="Send to AI">
-</form>
-{% if response_text %}
-<hr>
-<h3>Answer:</h3>
-<div class="response">{{ response_text }}</div>
-{% endif %}
-</div>
-</body>
-</html>
-"""
-
-@app.route('/', methods=['GET', 'POST'])
-def home():
-response_text = None
-if request.method == 'POST':
-prompt_text = request.form.get('prompt', '')
-uploaded_file = request.files.get('image')
-try:
-client = genai.Client(api_key=API_KEY)
-contents = []
-if uploaded_file and uploaded_file.filename != '':
-image_bytes = uploaded_file.read()
-mime_type = uploaded_file.mimetype or 'image/jpeg'
-contents.append({'mime_type': mime_type, 'data': image_bytes})
-contents.append(prompt_text)
-res = client.models.generate_content(
-model='gemini-2.5-flash',
-contents=contents
-)
-response_text = res.text
-except Exception as e:
-response_text = f"Error: {str(e)}"
-return render_template_string(HTML_TEMPLATE, response_text=response_text)
-
-if __name__ == '__main__':
-port = int(os.environ.get('PORT', 5000))
-app.run(host='0.0.0.0', port=port)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
